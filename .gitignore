@@ -1,5 +1,5 @@
-*.pyc
-*.a
-*.so
-*.csv
 data/
+samples/
+saved_model/
+__pycache__
+.vscode
