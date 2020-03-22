@@ -20,26 +20,12 @@ class DLabel (Label):
 		Label.__init__(self,cl,tl,br,prob)
 
 def save_model(model,path,verbose=0):
-	model.save(path)
-	# path = splitext(path)[0]
-	# model_json = model.to_json()
-	# with open('%s.json' % path,'w') as json_file:
-	# 	json_file.write(model_json)
-	# model.save_weights('%s.h5' % path)
-	# if verbose: print('Saved to %s' % path)
+	keras.models.save_model(model, path)
 
 def load_model(path,custom_objects={},verbose=0):
-	# from keras.models import model_from_json
-
-	# path = splitext(path)[0]
-	# with open('%s.json' % path,'r') as json_file:
-	# 	model_json = json_file.read()
-	# model = model_from_json(model_json, custom_objects=custom_objects)
-	# model.load_weights('%s.h5' % path)
-	# if verbose: print('Loaded from %s' % path)
 	makedirs(path, exist_ok=True)
 	if listdir(path):
-		model = keras.models.load_model(path)
+		model = keras.models.load_model(path, compile=False)
 	else:
 		model = create_model_eccv()
 	model.summary()

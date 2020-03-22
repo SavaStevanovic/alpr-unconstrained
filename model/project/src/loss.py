@@ -18,7 +18,8 @@ def l1(true,pred,szs):
 	res = tf.reduce_sum(res,1)
 	return res
 
-def loss(Ytrue, Ypred):
+@tf.function()
+def custom_loss(Ytrue, Ypred):
 
 	b = tf.shape(Ytrue)[0]
 	h = tf.shape(Ytrue)[1]

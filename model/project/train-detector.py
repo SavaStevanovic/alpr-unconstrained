@@ -11,9 +11,8 @@ from os import makedirs
 
 from src.keras_utils import save_model, load_model
 from src.label import readShapes
-from src.loss import loss
+from src.loss import custom_loss
 from src.utils import image_files_from_folder, show
-from src.sampler import augment_sample, labels2output_map
 from src.data_generator import DataGenerator
 
 from pdb import set_trace as pause
@@ -41,18 +40,9 @@ def load_network(modelpath,input_dim):
 
 	return model, model_stride, input_shape, output_shape
 
-def process_data_item(data_item,dim,model_stride):
-	XX,llp,pts = augment_sample(data_item[0],data_item[1].pts,dim)
-	YY = labels2output_map(llp,pts,dim,model_stride)
-	return XX,YY
-
-
 if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser()
-	# parser.add_argument('-m' 		,'--model'			,type=str   , required=True		,help='Path to previous model')
-	# parser.add_argument('-n' 		,'--name'			,type=str   , required=True		,help='Model name')
-	# parser.add_argument('-tr'		,'--train-dir'		,type=str   , required=True		,help='Input data directory for training')
 	parser.add_argument('-its'		,'--iterations'		,type=int   , default=300000	,help='Number of mini-batch iterations (default = 300.000)')
 	parser.add_argument('-bs'		,'--batch-size'		,type=int   , default=32		,help='Mini-batch size (default = 32)')
 	parser.add_argument('-od'		,'--output-dir'		,type=str   , default='./'		,help='Output directory (default = ./)')
@@ -74,7 +64,7 @@ if __name__ == '__main__':
 	model,model_stride,xshape,yshape = load_network(model_path,dim)
 
 	opt = getattr(keras.optimizers,args.optimizer)(lr=args.learning_rate)
-	model.compile(loss=loss, optimizer=opt)
+	model.compile(loss=custom_loss, optimizer=opt)
 
 	print('Checking input directory...')
 	Files = image_files_from_folder(train_dir)
@@ -87,40 +77,19 @@ if __name__ == '__main__':
 			if L:
 				I = cv2.imread(file)
 				Data.append([I,L[0]])
+	Data = np.array(Data)
 
 	print('%d images with labels found' % len(Data))
 
 	dg = DataGenerator(	data=Data, \
-						process_data_item_func=lambda x: process_data_item(x,dim,model_stride),\
-						xshape=xshape, \
-						yshape=(yshape[0],yshape[1],yshape[2]+1), \
-						nthreads=2, \
-						pool_size=1000, \
-						min_nsamples=100 )
-	dg.start()
+						batch_size=4, \
+						dim=dim, \
+						model_stride=model_stride)
+	model_path_final  = '%s' % (model_path)
 
-	Xtrain = np.empty((batch_size,dim,dim,3),dtype='single')
-	Ytrain = np.empty((batch_size,dim//model_stride,dim//model_stride,2*4+1))
-
-	model_path_backup = '%s/%s/%s_backup' % (outdir,outdir,netname)
-	model_path_final  = '%s/%s/%s_final'  % (outdir,outdir,netname)
-
-	for it in range(iterations):
-
-		print('Iter. %d (of %d)' % (it+1,iterations))
-
-		Xtrain,Ytrain = dg.get_batch(batch_size)
-		train_loss = model.train_on_batch(Xtrain,Ytrain)
-
-		print('\tLoss: %f' % train_loss)
-
-		# Save model every 1000 iterations
-		if (it+1) % 1000 == 0:
-			print('Saving model (%s)' % model_path_backup)
-			save_model(model,model_path_backup)
+	model.fit(x=dg, epochs=100)
 
 	print('Stopping data generator')
-	dg.stop()
 
 	print('Saving model (%s)' % model_path_final)
 	save_model(model,model_path_final)
