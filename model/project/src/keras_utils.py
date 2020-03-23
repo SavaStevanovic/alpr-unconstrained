@@ -19,6 +19,27 @@ class DLabel (Label):
 		br = np.amax(pts,1)
 		Label.__init__(self,cl,tl,br,prob)
 
+def load_network(modelpath,input_dim):
+
+	model = load_model(modelpath)
+
+	# Fixed input size for training
+	inputs  = keras.layers.Input(shape=(input_dim,input_dim,3))
+	outputs = model(inputs)
+
+	output_shape = tuple(outputs.shape[1:])
+	output_dim   = output_shape[1]
+	model_stride = input_dim // output_dim
+
+	assert input_dim % output_dim == 0, \
+		'The output resolution must be divisible by the input resolution'
+
+	assert model_stride == 2**4, \
+		'Make sure your model generates a feature map with resolution ' \
+		'16x smaller than the input'
+
+	return model, model_stride
+
 def save_model(model,path,verbose=0):
 	keras.models.save_model(model, path)
 

@@ -19,21 +19,23 @@ if __name__ == '__main__':
 
 	try:
 		
-		input_dir  = sys.argv[1]
-		output_dir = input_dir
-
+		input_dir  = 'data/to_label/cars_test'
+		output_dir = 'data/outputs'
+		os.makedirs((output_dir), exist_ok=True)
+		
 		lp_threshold = .5
 
-		wpod_net_path = sys.argv[2]
+		wpod_net_path = 'saved_model/'
 		wpod_net = load_model(wpod_net_path)
+		wpod_net.compile('sgd','mse')
 
-		imgs_paths = glob('%s/*car.png' % input_dir)
+		imgs_paths = glob('%s/*.jpg' % input_dir)
 
-		print 'Searching for license plates using WPOD-NET'
+		print('Searching for license plates using WPOD-NET')
 
 		for i,img_path in enumerate(imgs_paths):
 
-			print '\t Processing %s' % img_path
+			print('\t Processing %s' % img_path)
 
 			bname = splitext(basename(img_path))[0]
 			Ivehicle = cv2.imread(img_path)
@@ -41,7 +43,7 @@ if __name__ == '__main__':
 			ratio = float(max(Ivehicle.shape[:2]))/min(Ivehicle.shape[:2])
 			side  = int(ratio*288.)
 			bound_dim = min(side + (side%(2**4)),608)
-			print "\t\tBound dim: %d, ratio: %f" % (bound_dim,ratio)
+			print("\t\tBound dim: %d, ratio: %f" % (bound_dim,ratio))
 
 			Llp,LlpImgs,_ = detect_lp(wpod_net,im2single(Ivehicle),bound_dim,2**4,(240,80),lp_threshold)
 
